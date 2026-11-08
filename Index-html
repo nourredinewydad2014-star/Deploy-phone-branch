@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>2D Arcade Highway Racer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #111;
+      color: #fff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    #game-container {
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 200, 255, 0.2);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 3px solid #333;
+    }
+    canvas {
+      display: block;
+      background: #2a2a2a;
+    }
+    #hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 18px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+    }
+    .hud-box {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    #instructions {
+      margin-top: 15px;
+      color: #888;
+      font-size: 14px;
+      text-align: center;
+    }
+    kbd {
+      background: #333;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      color: #eee;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <canvas id="canvas" width="440" height="660"></canvas>
+    <div id="hud">
+      <div class="hud-box">SPEED: <span id="speedVal" style="color: #00e5ff;">0</span> km/h</div>
+      <div class="hud-box">COINS: <span id="coinVal" style="color: #ffd700;">0</span></div>
+      <div class="hud-box">SCORE: <span id="scoreVal" style="color: #69f0ae;">0</span></div>
+    </div>
+  </div>
+
+  <div id="instructions">
+    Steer: <kbd>A</kbd> / <kbd>D</kbd> or <kbd>←</kbd> / <kbd>→</kbd> &nbsp;|&nbsp; 
+    Throttle / Brake: <kbd>W</kbd> / <kbd>S</kbd> or <kbd>↑</kbd> / <kbd>↓</kbd> &nbsp;|&nbsp; 
+    Restart: <kbd>SPACE</kbd>
+  </div>
+
+<script>
+// --- AUDIO SYNTHESIZER (No external assets required) ---
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new AudioContext();
+}
+
+function playBeep(freq, type, duration) {
+  if (!audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch(e) {}
+}
+
+function playCrashSound() {
+  if (!audioCtx) return;
+  try {
+    const bufferSize = audioCtx.sampleRate * 0.4;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++)
